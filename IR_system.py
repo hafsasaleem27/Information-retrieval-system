@@ -3,6 +3,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from collections import defaultdict
+import math
 
 def collect_docs():
 
@@ -48,16 +49,43 @@ def text_preprocess(text):
     
     return lemmatized_words
 
+def calculate_tf(words):
+    total_terms = len(words)
+    terms = defaultdict(int)
+    for term in words:
+        terms[term] += 1
+    for term in terms:
+        terms[term] = terms[term] / total_terms
+    return terms
+
+def calculate_idf(content):
+    N = len(content)
+    dfs = defaultdict(int)
+
+    docs = []
+    for text in content:
+        words = text_preprocess(text)
+        docs.append(words)
+        unique_words = set(words)
+        for term in unique_words:
+            dfs[term] += 1
+
+    idf = {}
+    for word, df in dfs.items():
+        idf[word] = math.log(N / df, 10)
+    return idf, docs
+        
+
 def build_inverted_index(content): # content is a list of strings
     inverted_index = defaultdict(list)
+    idf, docs = calculate_idf(content)
 
-    for doc_id, text in enumerate(content):
-        lemmatized_words = text_preprocess(text)
-
-        unique_terms = set(lemmatized_words)
-
-        for term in unique_terms:
-            inverted_index[term].append(doc_id)
+    for doc_id, words in enumerate(docs):
+        tfs = calculate_tf(words)
+        
+        for term, tf in tfs.items():
+            tf_idf = tf * idf[term]
+            inverted_index[term].append((doc_id, tf_idf))
 
     return inverted_index
 
@@ -65,3 +93,4 @@ def build_inverted_index(content): # content is a list of strings
 article_index = build_inverted_index(article_content) # build an inverted index for articles' content
 heading_index = build_inverted_index(heading_content) # build an inverted index for headings' content
 print(heading_index)
+
