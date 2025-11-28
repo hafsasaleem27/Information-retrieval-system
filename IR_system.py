@@ -94,3 +94,27 @@ article_index = build_inverted_index(article_content) # build an inverted index 
 heading_index = build_inverted_index(heading_content) # build an inverted index for headings' content
 print(heading_index)
 
+# query processing
+query = input("Enter a query: ")
+
+def calculate_idf_query(content, query): # query is a string # content is a list of strings
+    N = len(content)
+    dfs = defaultdict(int)
+    
+    query_words = set(text_preprocess(query))
+
+    for doc in content:
+        doc_words = set(text_preprocess(doc))
+
+        for word in query_words:
+            if word in doc_words:
+                dfs[word] += 1
+   
+    idf = {}
+    for word in query_words:
+        df = dfs[word] if dfs[word] > 0 else 1
+        idf[word] = math.log(N / df, 10)
+    return idf
+
+query_words = text_preprocess(query)
+terms = calculate_tf(query_words)
