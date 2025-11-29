@@ -85,7 +85,7 @@ def build_inverted_index(content): # content is a list of strings
         
         for term, tf in tfs.items():
             tf_idf = tf * idf[term]
-            inverted_index[term].append((doc_id, tf_idf))
+            inverted_index[term].append((doc_id, tf_idf)) # list of tuples
 
     return inverted_index
 
@@ -93,9 +93,6 @@ def build_inverted_index(content): # content is a list of strings
 article_index = build_inverted_index(article_content) # build an inverted index for articles' content
 heading_index = build_inverted_index(heading_content) # build an inverted index for headings' content
 print(heading_index)
-
-# query processing
-query = input("Enter a query: ")
 
 def calculate_idf_query(content, query): # query is a string # content is a list of strings
     N = len(content)
@@ -116,5 +113,24 @@ def calculate_idf_query(content, query): # query is a string # content is a list
         idf[word] = math.log(N / df, 10)
     return idf
 
+# query processing
+query = input("Enter a query: ")
 query_words = text_preprocess(query)
 terms = calculate_tf(query_words)
+
+# Collect candidate documents
+# we have query_words and article_content
+
+def collect_candidate_docs(query, inverted_index):
+    query_words = text_preprocess(query)
+    candidate_doc_ids = set()
+
+    for word in query_words:
+        if word in inverted_index:
+            candidate_doc_ids |= {doc_id for doc_id, _ in inverted_index[word]}
+
+    return candidate_doc_ids
+
+article_ids = collect_candidate_docs(query, article_index)
+heading_ids = collect_candidate_docs(query, heading_index)
+print(heading_ids)
