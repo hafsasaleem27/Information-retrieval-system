@@ -74,7 +74,6 @@ def calculate_idf(content):
     for word, df in dfs.items():
         idf[word] = math.log(N / df, 10)
     return idf, docs
-        
 
 def build_inverted_index(content): # content is a list of strings
     inverted_index = defaultdict(list)
@@ -134,3 +133,16 @@ def collect_candidate_docs(query, inverted_index):
 article_ids = collect_candidate_docs(query, article_index)
 heading_ids = collect_candidate_docs(query, heading_index)
 print(heading_ids)
+
+def calculate_query_vector(query_words, idf):
+    terms = calculate_tf(query_words)
+    query_vector = {}
+    for term in terms:
+        query_vector[term] = terms[term] * idf[term]
+    return query_vector
+
+def calculate_document_vector(terms, idf):
+    document_vector = {}
+    for term in terms:
+        document_vector[term] = terms[term] * idf[term]
+    return document_vector
