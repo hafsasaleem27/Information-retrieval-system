@@ -152,9 +152,9 @@ def compute_magnitude(vector):
 
 def calculate_cosine_sim(query_vector, document_vector):
     product_val = calculate_dot_product(query_vector, document_vector)
-    normalized_query = compute_magnitude(query_vector)
-    normalized_document = compute_magnitude(document_vector)
-    return (product_val / (normalized_query * normalized_document))
+    query_magnitude = compute_magnitude(query_vector)
+    document_magnitude = compute_magnitude(document_vector)
+    return (product_val / (query_magnitude * document_magnitude))
 
 def merge_content(first_content, second_content):
     content_list = []
