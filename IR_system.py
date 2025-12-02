@@ -6,7 +6,6 @@ from collections import defaultdict
 import math
 
 def collect_docs():
-
     # contains all docs (articles)
     docs = []
 
@@ -15,8 +14,6 @@ def collect_docs():
         for doc in file_reader:
             docs.append(doc)
     return docs
-
-documents = collect_docs()
    
 def get_content(documents):
     article_col_index = 0
@@ -30,6 +27,7 @@ def get_content(documents):
     return [article_content, heading_content]
 
 def text_preprocess(text):
+    # tokenize text
     tokens = word_tokenize(text)
 
     # create a list of stopwords in English
@@ -58,7 +56,7 @@ def calculate_tf(words):
         terms[term] = terms[term] / total_terms
     return terms
 
-def calculate_idf(content):
+def calculate_idf(content): # content is a list of strings
     N = len(content)
     dfs = defaultdict(int)
 
@@ -88,11 +86,6 @@ def build_inverted_index(content): # content is a list of strings
 
     return inverted_index
 
-[article_content, heading_content] = get_content(documents)
-article_index = build_inverted_index(article_content) # build an inverted index for articles' content
-heading_index = build_inverted_index(heading_content) # build an inverted index for headings' content
-print(heading_index)
-
 def calculate_idf_query(content, query): # query is a string # content is a list of strings
     N = len(content)
     dfs = defaultdict(int)
@@ -112,14 +105,7 @@ def calculate_idf_query(content, query): # query is a string # content is a list
         idf[word] = math.log(N / df, 10)
     return idf
 
-# query processing
-query = input("Enter a query: ")
-query_words = text_preprocess(query)
-terms = calculate_tf(query_words)
-
 # Collect candidate documents
-# we have query_words and article_content
-
 def collect_candidate_docs(query, inverted_index):
     query_words = text_preprocess(query)
     candidate_doc_ids = set()
@@ -130,19 +116,105 @@ def collect_candidate_docs(query, inverted_index):
 
     return candidate_doc_ids
 
-article_ids = collect_candidate_docs(query, article_index)
-heading_ids = collect_candidate_docs(query, heading_index)
-print(heading_ids)
-
 def calculate_query_vector(query_words, idf):
-    terms = calculate_tf(query_words)
     query_vector = {}
+    terms = calculate_tf(query_words)
     for term in terms:
         query_vector[term] = terms[term] * idf[term]
     return query_vector
 
-def calculate_document_vector(terms, idf):
-    document_vector = {}
-    for term in terms:
-        document_vector[term] = terms[term] * idf[term]
-    return document_vector
+def cal_doc_vectors(candidate_doc_ids, query_words, inverted_index):
+    document_vectors = {doc_id: {} for doc_id in candidate_doc_ids}
+    # candidate_doc_ids is a set
+    # query_words is a list of strings
+    # inverted index is a dictionary with value being list of tuples
+    for word in query_words:
+        if word in inverted_index:
+            for tup in inverted_index[word]:
+                if tup[0] in candidate_doc_ids:
+                    document_vectors[tup[0]][word] = tup[1]
+                    # place tf-idf value here after matching candidate_id
+    return document_vectors
+
+def calculate_dot_product(query_vector, document_vector):
+    dot_product = 0
+    for term in query_vector:
+        if term in document_vector:
+            dot_product += query_vector[term] * document_vector[term]
+    return dot_product
+
+def compute_magnitude(vector):
+    magnitude = 0
+    for term in vector:
+        magnitude += vector[term] ** 2
+    magnitude = math.sqrt(magnitude)
+    return magnitude
+
+def calculate_cosine_sim(query_vector, document_vector):
+    product_val = calculate_dot_product(query_vector, document_vector)
+    normalized_query = compute_magnitude(query_vector)
+    normalized_document = compute_magnitude(document_vector)
+    return (product_val / (normalized_query * normalized_document))
+
+def merge_content(first_content, second_content):
+    content_list = []
+    for element1, element2 in zip(first_content, second_content):
+        content_list.append(element1 + " " + element2)
+    return content_list
+
+def calculate_cosine_similarities(query_vector, document_vectors):
+    cosine_similarities = {}
+    for doc_id, vector in document_vectors.items():
+        # calculate cosine similarity
+        cosine_similarities[doc_id] = calculate_cosine_sim(query_vector, vector)
+    return cosine_similarities
+
+def rank_results(cosine_similarities):
+    ranked_docs = sorted(cosine_similarities.items(), key=lambda x: x[1], reverse=True)
+    return ranked_docs
+
+def display_documents(ranked_results, article_content, heading_content):
+    for doc_id, score in ranked_results:
+        heading = heading_content[doc_id]
+        content = article_content[doc_id]
+
+        print(f"Rank: {doc_id} | Score: {score:.4f}")
+        print("Heading:", heading)
+        print("Content:", content)
+        print("-" * 50)
+
+# collect docs in a list
+documents = collect_docs()
+[article_content, heading_content] = get_content(documents)
+
+# merge article_content and heading_content into one list
+merged_list = merge_content(heading_content, article_content)
+
+inverted_index = build_inverted_index(merged_list) # build an inverted index
+
+# query processing
+query = input("Enter a query: ")
+query_words = text_preprocess(query)
+
+# calculate candidate document ids
+candidate_doc_ids = collect_candidate_docs(query, inverted_index)
+
+# calculate query idf
+query_idf = calculate_idf_query(merged_list, query)
+
+# calculate query vector
+query_vector = calculate_query_vector(query_words, query_idf)
+
+# calculate document vectors for candidate documents
+document_vectors = cal_doc_vectors(candidate_doc_ids, query_words, inverted_index)
+
+# calculate cosine similarities for each query/doc pair
+cos_similarities = calculate_cosine_similarities(query_vector, document_vectors)
+
+# rank results
+ranked_results = rank_results(cos_similarities)
+
+# print results
+display_documents(ranked_results, article_content, heading_content)
+
+# print(ranked_results)
